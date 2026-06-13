@@ -47,6 +47,12 @@ const routes = [
         meta: { title: '操作审计日志', icon: 'Notebook' }
       },
       {
+        path: 'excel-chart',
+        name: 'ExcelChart',
+        component: () => import('@/views/excelChart/index.vue'),
+        meta: { title: '数据导入生成图表', icon: 'DataLine' }
+      },
+      {
         path: 'data-entry',
         name: 'DataEntry',
         component: () => import('@/views/dataEntry/index.vue'),

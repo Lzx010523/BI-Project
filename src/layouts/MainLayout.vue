@@ -2,7 +2,7 @@
   <el-container class="main-layout">
     <!-- 侧边栏 -->
     <el-aside :width="appStore.sidebarCollapsed ? '64px' : '220px'" class="sidebar">
-      <div class="logo-wrapper">
+      <div class="logo-wrapper" @click="goHome" title="返回首页">
         <img src="/favicon.svg" alt="logo" class="logo-icon" />
         <span v-show="!appStore.sidebarCollapsed" class="logo-text">BI 智能分析平台</span>
       </div>
@@ -134,10 +134,15 @@ onUnmounted(() => {
 })
 
 // 菜单路由（过滤掉 hidden）
-// const mainRoute = router.options.routes.find(r => r.path === '/')
-// const menuRoutes = computed(() => {
-//   return (mainRoute?.children || []).filter(r => !r.meta?.hidden)
-// })
+const mainRoute = router.options.routes.find(r => r.path === '/')
+const menuRoutes = computed(() => {
+  return (mainRoute?.children || []).filter(r => !r.meta?.hidden)
+})
+
+// 点击 logo 跳转首页
+function goHome() {
+  router.push('/dashboard')
+}
 
 // 当前激活菜单
 const activeMenu = computed(() => {
@@ -220,6 +225,12 @@ function handleUserCommand(command) {
   padding: 0 16px;
   overflow: hidden;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.logo-wrapper:hover {
+  background-color: #ffffff14;
 }
 
 .logo-icon {
