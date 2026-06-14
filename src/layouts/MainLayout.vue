@@ -11,10 +11,11 @@
           :default-active="activeMenu"
           :collapse="appStore.sidebarCollapsed"
           :collapse-transition="false"
+          :unique-opened="true"
           router
           background-color="#001529"
           text-color="#ffffffa6"
-          active-text-color="#1890ff"
+          active-text-color="#ffffff"
           class="sidebar-menu"
         >
           <template v-for="route in menuRoutes" :key="route.path">
@@ -248,6 +249,87 @@ function handleUserCommand(command) {
 
 .sidebar-menu {
   border-right: none;
+}
+
+/* 菜单选中态：左侧高亮条 + 浅蓝背景 + 文字加粗 */
+.sidebar-menu :deep(.el-menu-item),
+.sidebar-menu :deep(.el-sub-menu__title) {
+  position: relative;
+  height: 44px;
+  line-height: 44px;
+  margin: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  padding-left: 16px !important;
+}
+
+/* hover 效果 */
+.sidebar-menu :deep(.el-menu-item:hover),
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background-color: #ffffff14 !important;
+  color: #ffffffd9 !important;
+}
+
+/* 选中态 */
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%) !important;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.35);
+}
+
+/* 选中态左侧高亮条 */
+.sidebar-menu :deep(.el-menu-item.is-active::before) {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 18px;
+  background: #1890ff;
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.6);
+}
+
+/* 父级菜单（包含激活子项时）高亮 */
+.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: #1890ff !important;
+  background-color: #ffffff0a !important;
+}
+
+/* 子菜单缩进 */
+.sidebar-menu :deep(.el-menu .el-menu-item) {
+  padding-left: 36px !important;
+  margin: 2px 8px;
+  height: 38px;
+  line-height: 38px;
+}
+
+/* 图标颜色 */
+.sidebar-menu :deep(.el-menu-item .el-icon),
+.sidebar-menu :deep(.el-sub-menu__title .el-icon) {
+  margin-right: 8px;
+  font-size: 16px;
+  transition: transform 0.2s;
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active .el-icon) {
+  transform: scale(1.1);
+}
+
+/* 折叠状态下的菜单项 */
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title) {
+  margin: 4px 8px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item.is-active::before) {
+  left: -2px;
 }
 
 .main-container {
