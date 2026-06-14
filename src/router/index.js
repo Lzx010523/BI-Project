@@ -59,6 +59,30 @@ const routes = [
         meta: { title: '数据填报', icon: 'Edit' }
       },
       {
+        path: 'metric',
+        name: 'MetricManage',
+        component: () => import('@/views/metric/index.vue'),
+        meta: { title: '指标管理', icon: 'Histogram' }
+      },
+      {
+        path: 'datasource',
+        name: 'DatasourceManage',
+        component: () => import('@/views/datasource/index.vue'),
+        meta: { title: '数据源管理', icon: 'Coin' }
+      },
+      {
+        path: 'ai-analysis',
+        name: 'AIAnalysis',
+        component: () => import('@/views/aiAnalysis/index.vue'),
+        meta: { title: '智能问数', icon: 'MagicStick' }
+      },
+      {
+        path: 'etl',
+        name: 'ETL',
+        component: () => import('@/views/etl/index.vue'),
+        meta: { title: '数据准备（ETL）', icon: 'DataLine' }
+      },
+      {
         path: 'system',
         name: 'System',
         redirect: '/system/user',
