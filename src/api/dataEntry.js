@@ -1,4 +1,16 @@
 import request from '@/utils/request'
+import axios from 'axios'
+
+const saleRequest = axios.create({
+  baseURL: 'http://localhost:9201',
+  timeout: 30000
+})
+// 复用 token
+saleRequest.interceptors.request.use((config) => {
+  const token = localStorage.getItem('bi_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 export const dataEntryApi = {
   // 获取表单模板列表
@@ -26,7 +38,7 @@ export const dataEntryApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   // 下载导入模板
-  downloadImportTemplate: (templateId) => request.get(`/data-entry/data/import-template/${templateId}`, { responseType: 'blob' }),
+  downloadImportTemplate: () => saleRequest.post('/sale/exportTemplateExcelFile', {}, { responseType: 'blob' }),
   // 导出填报数据
   exportEntryData: (params) => request.get('/data-entry/data/export', { params, responseType: 'blob' })
 }

@@ -23,6 +23,24 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   (response) => {
+    // 文件下载（blob）直接返回整个 response
+    if (response.config.responseType === 'blob') {
+      const contentType = response.headers['content-type'] || ''
+      // 如果后端返回的是 JSON 错误而非文件流，解析并拒绝
+      if (contentType.includes('json')) {
+        return response.data.text().then((text) => {
+          try {
+            const res = JSON.parse(text)
+            if (res.code !== 200 && res.code !== 0) {
+              ElMessage.error(res.msg || res.message || '请求失败')
+              return Promise.reject(new Error(res.msg || '请求失败'))
+            }
+          } catch {}
+          return response
+        })
+      }
+      return response
+    }
     const { code, message, data } = response.data
     if (code === 200 || code === 0) {
       return data

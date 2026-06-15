@@ -195,6 +195,7 @@ import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Upload, Download, Search, Document } from '@element-plus/icons-vue'
 import { useSalesStore } from '@/stores'
+import { dataEntryApi } from '@/api'
 
 const salesStore = useSalesStore()
 const loading = ref(false)
@@ -312,7 +313,26 @@ function handleImport() {
   }, 2000)
 }
 
-function downloadTemplate() { ElMessage.info('模板下载中...') }
+async function downloadTemplate() {
+  try {
+    const res = await dataEntryApi.downloadImportTemplate()
+    const blob = new Blob([res.data])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    // 从响应头获取文件名，默认使用 "导入模板.xlsx"
+    const disposition = res.headers['content-disposition']
+    const filename = disposition
+      ? decodeURIComponent(disposition.split('filename=')[1]?.replace(/"/g, '') || '导入模板.xlsx')
+      : '导入模板.xlsx'
+    link.download = filename
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('模板下载成功')
+  } catch (e) {
+    ElMessage.error('模板下载失败')
+  }
+}
 function exportData() { ElMessage.info('数据导出中...') }
 function showTemplateDialog() { ElMessage.info('模板管理功能开发中') }
 </script>
