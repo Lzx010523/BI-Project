@@ -223,8 +223,10 @@ import {
   ShoppingCart, Money, UserFilled, TrendCharts,
   Van, OfficeBuilding, ShoppingBag, Wallet
 } from '@element-plus/icons-vue'
+import { useSalesStore } from '@/stores'
 
 const router = useRouter()
+const salesStore = useSalesStore()
 
 // ===== 业务域 =====
 const domains = [
@@ -241,7 +243,7 @@ const timeRange = ref('month')
 const compareMode = ref('mom')
 const compareText = computed(() => ({ mom: '环比上周/上月', yoy: '同比去年同期', target: '对比本期目标' }[compareMode.value]))
 
-// ===== 域 → KPI 配置 =====
+// ===== 域 -> KPI 配置 =====
 const kpiConfig = {
   sales: {
     trendMetric: 'orders',
@@ -259,13 +261,7 @@ const kpiConfig = {
         { prop: 'growth', label: '环比', width: 90, align: 'right', isTrend: true },
         { prop: 'status', label: '状态', width: 90, isTag: true, tagType: v => v === '达标' ? 'success' : v === '预警' ? 'warning' : 'danger' }
       ],
-      rows: [
-        { region: '华东大区', orders: 1820, revenue: 142800, growth: 15.2, status: '达标' },
-        { region: '华南大区', orders: 956, revenue: 78320, growth: 8.5, status: '达标' },
-        { region: '华北大区', orders: 612, revenue: 51800, growth: -3.2, status: '预警' },
-        { region: '华中大区', orders: 285, revenue: 18900, growth: -12.5, status: '严重' },
-        { region: '西南大区', orders: 153, revenue: 9450, growth: 5.2, status: '达标' }
-      ]
+      rows: []
     }
   },
   finance: {
@@ -347,14 +343,36 @@ const kpiConfig = {
   }
 }
 
-const currentKpis = computed(() => kpiConfig[currentDomain.value].kpis)
+// 销售域动态 KPI（从 salesStore 实时获取）
+const salesKpis = computed(() => [
+  { key: 'orders', label: '订单量', value: salesStore.totalCount.toLocaleString(), prefix: '', unit: '单', compare: 12.5, icon: 'ShoppingCart', bgColor: 'linear-gradient(135deg,#1890ff,#096dd9)', targetRate: Math.min(100, Math.round(salesStore.totalCount / 50 * 100)) },
+  { key: 'revenue', label: '销售总额', value: salesStore.totalAmount.toLocaleString(), prefix: '¥', unit: '', compare: 8.3, icon: 'Money', bgColor: 'linear-gradient(135deg,#f5222d,#cf1322)', targetRate: Math.min(100, Math.round(salesStore.totalAmount / 350000 * 100)) },
+  { key: 'qty', label: '销售数量', value: salesStore.totalQty.toLocaleString(), prefix: '', unit: '件', compare: 5.6, icon: 'TrendCharts', bgColor: 'linear-gradient(135deg,#52c41a,#389e0d)', targetRate: Math.min(100, Math.round(salesStore.totalQty / 300 * 100)) },
+  { key: 'avgOrder', label: '客单价', value: salesStore.totalCount > 0 ? Math.round(salesStore.totalAmount / salesStore.totalCount).toLocaleString() : '0', prefix: '¥', unit: '', compare: 3.2, icon: 'Wallet', bgColor: 'linear-gradient(135deg,#fa8c16,#d46b08)', targetRate: 72 }
+])
+
+// 销售域动态明细行（从 salesStore.regionSummary 获取）
+const salesDetailRows = computed(() => {
+  return salesStore.regionSummary.map(r => ({
+    region: r.region, orders: r.orders, revenue: r.revenue,
+    growth: 0, status: r.revenue > 30000 ? '达标' : r.revenue > 15000 ? '预警' : '严重'
+  }))
+})
+
+const currentKpis = computed(() => {
+  if (currentDomain.value === 'sales') return salesKpis.value
+  return kpiConfig[currentDomain.value].kpis
+})
 const trendMetric = ref('orders')
-watch(currentDomain, (v) => { trendMetric.value = kpiConfig[v].trendMetric })
+watch(currentDomain, (v) => { trendMetric.value = kpiConfig[v].trendMetric || 'orders' })
 
 // ===== 详情列表 =====
 const detailKw = ref('')
 const detailColumns = computed(() => kpiConfig[currentDomain.value].detail.columns)
-const detailRows = computed(() => kpiConfig[currentDomain.value].detail.rows)
+const detailRows = computed(() => {
+  if (currentDomain.value === 'sales') return salesDetailRows.value
+  return kpiConfig[currentDomain.value].detail.rows
+})
 const filteredDetails = computed(() => {
   if (!detailKw.value) return detailRows.value
   return detailRows.value.filter(r => Object.values(r).some(v => String(v).includes(detailKw.value)))
@@ -416,7 +434,6 @@ function renderTrend() {
   const xData = Array.from({ length: days }, (_, i) => dayjs().subtract(days - i - 1, 'day').format('MM-DD'))
   const current = xData.map(() => Math.floor(Math.random() * 1000) + 500)
   const compare = xData.map(() => Math.floor(Math.random() * 900) + 450)
-  const kpi = currentKpis.value.find(k => k.key === trendMetric.value)
   charts.trend.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['本期', compareText.value], top: 0 },
@@ -463,20 +480,28 @@ function renderFunnel() {
 
 function renderTop() {
   if (!charts.top) charts.top = echarts.init(topChartRef.value)
-  const lists = {
-    sales: { names: ['智能手机Pro', '无线耳机X3', '平板Air', '机械键盘K1', '4K显示器', '蓝牙音箱S2', '智能手表W5', '游戏手柄G1', '充电宝', '数据线套装'], values: [856, 743, 621, 580, 524, 486, 432, 398, 356, 312] },
-    finance: { names: ['客户A-华东大客户', '客户B-华南连锁', '客户C-华北政府', '客户D-华中制造', '客户E-西南分销', '客户F-西北', '客户G-东北', '客户H-华东', '客户I-华南', '客户J-华北'], values: [186, 152, 128, 98, 85, 72, 65, 58, 52, 45] },
-    operation: { names: ['抖音广告', '百度SEM', '微信朋友圈', '小红书种草', '知乎问答', 'B站UP主', 'KOL直播', '信息流', '应用商店', '自然搜索'], values: [42800, 28560, 18650, 12380, 8520, 6280, 5860, 4520, 3850, 3520] },
-    supply: { names: ['上海中心仓', '广州南沙仓', '北京顺义仓', '成都龙泉仓', '武汉江夏仓', '杭州萧山仓', '南京六合仓', '西安经开仓', '重庆西永仓', '苏州相城仓'], values: [11560, 7820, 5980, 4120, 3850, 3520, 2850, 2350, 1980, 1620] }
-  }[currentDomain.value]
+  let names, values
+  if (currentDomain.value === 'sales') {
+    const ps = salesStore.productSummary
+    names = ps.map(p => p.name)
+    values = ps.map(p => p.qty)
+  } else {
+    const lists = {
+      finance: { names: ['客户A-华东大客户', '客户B-华南连锁', '客户C-华北政府', '客户D-华中制造', '客户E-西南分销', '客户F-西北', '客户G-东北', '客户H-华东', '客户I-华南', '客户J-华北'], values: [186, 152, 128, 98, 85, 72, 65, 58, 52, 45] },
+      operation: { names: ['抖音广告', '百度SEM', '微信朋友圈', '小红书种草', '知乎问答', 'B站UP主', 'KOL直播', '信息流', '应用商店', '自然搜索'], values: [42800, 28560, 18650, 12380, 8520, 6280, 5860, 4520, 3850, 3520] },
+      supply: { names: ['上海中心仓', '广州南沙仓', '北京顺义仓', '成都龙泉仓', '武汉江夏仓', '杭州萧山仓', '南京六合仓', '西安经开仓', '重庆西永仓', '苏州相城仓'], values: [11560, 7820, 5980, 4120, 3850, 3520, 2850, 2350, 1980, 1620] }
+    }[currentDomain.value]
+    names = lists.names
+    values = lists.values
+  }
   charts.top.setOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: lists.names.slice().reverse() },
+    yAxis: { type: 'category', data: names.slice().reverse() },
     series: [{
       type: 'bar',
-      data: lists.values.slice().reverse(),
+      data: values.slice().reverse(),
       barWidth: 14,
       itemStyle: { borderRadius: [0, 8, 8, 0], color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
         { offset: 0, color: '#1890ff' }, { offset: 1, color: '#36cfc9' }
@@ -488,11 +513,26 @@ function renderTop() {
 
 function renderRegion() {
   if (!charts.region) charts.region = echarts.init(regionChartRef.value)
-  const data = {
-    region: [{ name: '华东', value: 142800, color: '#1890ff' }, { name: '华南', value: 78320, color: '#52c41a' }, { name: '华北', value: 51800, color: '#faad14' }, { name: '华中', value: 18900, color: '#f5222d' }, { name: '西南', value: 9450, color: '#722ed1' }, { name: '西北', value: 6280, color: '#13c2c2' }, { name: '东北', value: 4520, color: '#fa8c16' }],
-    dept: [{ name: '销售部', value: 156800, color: '#1890ff' }, { name: '市场部', value: 89500, color: '#52c41a' }, { name: '运营部', value: 56200, color: '#faad14' }, { name: '财务部', value: 32600, color: '#722ed1' }, { name: '客服部', value: 18800, color: '#13c2c2' }],
-    channel: [{ name: '线上直营', value: 128600, color: '#1890ff' }, { name: '第三方平台', value: 96500, color: '#52c41a' }, { name: '线下门店', value: 56200, color: '#faad14' }, { name: 'O2O', value: 28500, color: '#722ed1' }]
-  }[regionDim.value]
+  let data
+  if (currentDomain.value === 'sales') {
+    const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16']
+    const dim = regionDim.value
+    let summary
+    if (dim === 'region') summary = salesStore.regionSummary
+    else if (dim === 'dept') summary = salesStore.deptSummary
+    else summary = salesStore.channelSummary
+    data = summary.map((item, i) => ({
+      name: item.region || item.department || item.channel,
+      value: item.revenue,
+      color: colors[i % colors.length]
+    }))
+  } else {
+    data = {
+      region: [{ name: '华东', value: 142800, color: '#1890ff' }, { name: '华南', value: 78320, color: '#52c41a' }, { name: '华北', value: 51800, color: '#faad14' }, { name: '华中', value: 18900, color: '#f5222d' }, { name: '西南', value: 9450, color: '#722ed1' }, { name: '西北', value: 6280, color: '#13c2c2' }, { name: '东北', value: 4520, color: '#fa8c16' }],
+      dept: [{ name: '销售部', value: 156800, color: '#1890ff' }, { name: '市场部', value: 89500, color: '#52c41a' }, { name: '运营部', value: 56200, color: '#faad14' }, { name: '财务部', value: 32600, color: '#722ed1' }, { name: '客服部', value: 18800, color: '#13c2c2' }],
+      channel: [{ name: '线上直营', value: 128600, color: '#1890ff' }, { name: '第三方平台', value: 96500, color: '#52c41a' }, { name: '线下门店', value: 56200, color: '#faad14' }, { name: 'O2O', value: 28500, color: '#722ed1' }]
+    }[regionDim.value]
+  }
   charts.region.setOption({
     tooltip: { trigger: 'item' },
     legend: { type: 'scroll', orient: 'vertical', right: '2%', top: 'middle' },
@@ -537,7 +577,6 @@ const drillDetails = ref([])
 function drillDown(row) {
   drillRow.value = row
   drillVisible.value = true
-  // 生成下钻明细
   drillDetails.value = Array.from({ length: 14 }, (_, i) => ({
     date: dayjs().subtract(13 - i, 'day').format('YYYY-MM-DD'),
     metric: row.region || row.subject || row.channel || row.warehouse || '指标',
@@ -582,7 +621,7 @@ function exportDetail() {
 
 // ===== 全屏 =====
 function toggleFullscreen() {
-  if (!document.fullscreenElement) document.document.documentElement.requestFullscreen()
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen()
   else document.exitFullscreen()
 }
 
